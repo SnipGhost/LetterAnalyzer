@@ -7,12 +7,17 @@
 //-----------------------------------------------------------------------------
 int main()
 {
+	if (!initLog("log.txt"))    // Поднимаем поток логов
+		return 1;
 
-	Word test("Hello");
-	test.print();
+	ofstream fout("out.txt");   // Открываем поток для записи объемного вывода
+	if (fout.fail()) return 1;
 
-	Dictionary dic("test.txt");
-	dic.print();
+	Word test("characterized"); // [ПРИМЕР] Создаем слово
+	test.print();               // [ПРИМЕР] Выводим по-умолчанию (на экран)
+
+	Dictionary dic("test.txt"); // [ПРИМЕР] Создаем словарь
+	dic.print(fout);            // [ПРИМЕР] Выводим в файл
 
 	return 0;
 }

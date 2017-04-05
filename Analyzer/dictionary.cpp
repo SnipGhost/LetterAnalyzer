@@ -5,8 +5,32 @@
 //-----------------------------------------------------------------------------
 #include "dictionary.h"
 //-----------------------------------------------------------------------------
-void showMsg(int type, string msg, ostream &out)
+ostream *logs; // Глобальный поток логов
+bool isFileLog = false;
+//-----------------------------------------------------------------------------
+bool initLog(string fileName)
 {
+	if (fileName == "cout")
+	{
+		logs = &cout;
+		return 1;
+	}
+	logs = new ofstream("log.txt");
+	isFileLog = true;
+	return !logs->fail();
+}
+//-----------------------------------------------------------------------------
+void saveLog()
+{
+	if (isFileLog)
+	{
+		((ofstream*)logs)->close();
+		delete logs;
+	}
+}
+//-----------------------------------------------------------------------------
+void showMsg(int type, string msg, ostream &out)
+{	
 	if (type == 0 && DEBUG_CRIT)
 	{
 		out << "[!] " << msg << endl;
@@ -47,7 +71,7 @@ Word::Word(const string s): str(s)
 			return;
 		}
 	}
-	showMsg(2, "Word '" + str + "' was read successfully");
+	showMsg(3, "Word '" + str + "' was created successfully");
 }
 //-----------------------------------------------------------------------------
 size_t Word::size()
@@ -69,7 +93,7 @@ void Word::print(ostream &out)
 {
 	if (str == ERR_WORD)
 	{
-		showMsg(1, "Attempt to print an ERR_WORD");
+		showMsg(1, "Attempt to print an invalid word");
 		return;
 	}
 	for (size_t i = 0; i < ALPHA; ++i)
@@ -99,9 +123,10 @@ Dictionary::~Dictionary()
 //-----------------------------------------------------------------------------
 void Dictionary::clear()
 {
+	showMsg(3, "Clearing dictionary ...");
 	for (size_t i = 0; i < words.size(); ++i)
 	{
-		showMsg(3, words[i]->gets());
+		showMsg(3, "Word '" + words[i]->gets() + "' is deleting");
 		if (words[i] != NULL) delete words[i];
 	}
 	words.clear();
@@ -181,6 +206,7 @@ void Dictionary::print(ostream &out)
 	}
 	for (size_t i = 0; i < words.size(); ++i)
 	{
+		out << setw(5) << i << " ";
 		out << words[i]->gets() << endl;
 	}
 	showMsg(2, "Dictionary printed");
