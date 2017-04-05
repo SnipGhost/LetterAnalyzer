@@ -195,7 +195,20 @@ bool Dictionary::readFile(string fileName)
 	return 1;
 }
 //-----------------------------------------------------------------------------
-// 
+void Dictionary::find(Word &w, ostream &out)
+{
+	size_t idx = 0;
+	if (pos.count(w.size()) != 0) idx = pos[w.size()];
+	for (size_t i = idx; i < words.size(); ++i)
+	{
+		size_t *b = w.cmp(), *a = words[i]->cmp();
+		bool allowed = true;
+		for (size_t j = 0; (j < ALPHA)&&(allowed); ++j)
+			if (a[j] > b[j]) allowed = false;
+		if (allowed)
+			out << words[i]->gets() << endl;
+	}
+}
 //-----------------------------------------------------------------------------
 void Dictionary::print(ostream &out)
 {
