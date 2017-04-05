@@ -5,19 +5,19 @@
 //-----------------------------------------------------------------------------
 #include "dictionary.h"
 //-----------------------------------------------------------------------------
-ostream *logs; // Глобальный поток логов
-bool isFileLog = false;
+ostream *logs;          // Глобальный поток логов
+bool isFileLog = false; // Логи открыты как файл (да/нет)
 //-----------------------------------------------------------------------------
 bool initLog(string fileName)
 {
-	if (fileName == "cout")
+	if (fileName == "cout") // Исключительный случай - установить как iostream
 	{
 		logs = &cout;
 		return 1;
 	}
-	logs = new ofstream("log.txt");
+	logs = new ofstream(fileName); // Открыть лог как файл-поток
 	isFileLog = true;
-	return !logs->fail();
+	return !logs->fail();          // Возвращаем состояние
 }
 //-----------------------------------------------------------------------------
 void saveLog()
@@ -44,6 +44,11 @@ void showMsg(int type, string msg, ostream &out)
 	if (type == 2 && DEBUG_NORM)
 	{
 		out << "[+] " << msg << endl;
+		return;
+	}
+	if (type == 3 && DEBUG_INFO)
+	{
+		out << "[i] " << msg << endl;
 		return;
 	}
 	#ifdef DEBUG
@@ -126,7 +131,7 @@ void Dictionary::clear()
 	showMsg(3, "Clearing dictionary ...");
 	for (size_t i = 0; i < words.size(); ++i)
 	{
-		showMsg(3, "Word '" + words[i]->gets() + "' is deleting");
+		showMsg(4, "Word '" + words[i]->gets() + "' is deleting");
 		if (words[i] != NULL) delete words[i];
 	}
 	words.clear();
@@ -140,40 +145,40 @@ size_t Dictionary::size()
 //-----------------------------------------------------------------------------
 void Dictionary::addWord(string word)
 {
-	Word *w = new Word(word);
-	words.push_back(w);
-	size_t idx = 0;
-	if (pos.count(w->size()) == 0)
-	{
+	Word *w = new Word(word);      // Выделяем память под новое слово
+	words.push_back(w);            // Временно добавляем в конец
+	size_t idx = 0;                // Положение нового слова в векторе слов
+	if (pos.count(w->size()) == 0) // Если блока с такой длиной слова еще нет
+	{                              // То начинаем создавать новый блок
 		size_t c = 0;
 		auto it = pos.rbegin();
-		for (it = pos.rbegin(); it != pos.rend(); ++it) 
+		for (it = pos.rbegin(); it != pos.rend(); ++it) // Ищем положение
 		{
 			++c;
-			showMsg(3, to_string(w->size()) + ">" + to_string(it->first));
+			showMsg(4, to_string(w->size()) + ">" + to_string(it->first));
 			if (w->size() > it->first)
 			{
-				showMsg(3, "Yes it->second=" + to_string(it->second));
+				showMsg(4, "Yes it->second=" + to_string(it->second));
 				idx = it->second;
-				break;
+				break;                              // Положение найдено
 			}
 		}
-		if (it == pos.rend()) idx = words.size()-1;
+		if (it == pos.rend()) idx = words.size()-1; // Не нашли положения
 	}
 	else
 	{
-		idx = pos[w->size()];
+		idx = pos[w->size()]; // Иначе - записываем слово в свой блок
 	}
-	showMsg(3, "idx = " + to_string(idx));
-	for (size_t i = words.size()-1; i > idx; --i) // Смещаем слова
+	showMsg(4, "idx = " + to_string(idx));
+	for (size_t i = words.size()-1; i > idx; --i)        // Смещаем слова
 		words[i] = words[i-1];
 	for (auto it = pos.rbegin(); it != pos.rend(); ++it) // Смещаем блоки
 	{
 		if (it->second >= idx && w->size() != it->first) 
 			it->second++;
 	}
-	words[idx] = w;
-	pos[w->size()] = idx;
+	words[idx] = w;       // Финальное обновление положения слова
+	pos[w->size()] = idx; // Обновление позиции блока
 }
 //-----------------------------------------------------------------------------
 bool Dictionary::readFile(string fileName)
@@ -197,27 +202,41 @@ bool Dictionary::readFile(string fileName)
 //-----------------------------------------------------------------------------
 void Dictionary::find(Word &w, ostream &out)
 {
+	showMsg(3, "Searching for '" + w.gets() + "' started");
 	size_t idx = 0;
-	if (pos.count(w.size()) != 0) idx = pos[w.size()];
-	for (size_t i = idx; i < words.size(); ++i)
+	if (pos.count(w.size()) != 0) // Если блок данной длины сущестует
+		idx = pos[w.size()];      // То начинаем просматривать с него
+	else 
 	{
-		size_t *b = w.cmp(), *a = words[i]->cmp();
+		for (auto it = pos.rbegin(); it != pos.rend(); ++it) // Ищем блок
+		{
+			if (w.size() > it->first) // Как только найдем меньшую длину
+			{
+				idx = it->second;     // Записываем индекс
+				break;
+			}
+		}
+	}
+	for (size_t i = idx; i < words.size(); ++i)    // Просматриваем слова
+	{
+		size_t *b = w.cmp(), *a = words[i]->cmp(); // Сравниваем a и b
 		bool allowed = true;
-		for (size_t j = 0; (j < ALPHA)&&(allowed); ++j)
-			if (a[j] > b[j]) allowed = false;
-		if (allowed)
+		for (size_t j = 0; (j < ALPHA)&&(allowed); ++j) // Если не совпали
+			if (a[j] > b[j]) allowed = false;           // Хотя бы в одной
+		if (allowed)                                    // То не выводим слово
 			out << words[i]->gets() << endl;
 	}
+	showMsg(2, "Search for '" + w.gets() + "' complete");
 }
 //-----------------------------------------------------------------------------
 void Dictionary::print(ostream &out)
 {
-	for (auto it = pos.begin(); it != pos.end(); ++it)
+	for (auto it = pos.begin(); it != pos.end(); ++it) // Разметка блоков
 	{
 		out << "len: " << setw(2) << it->first;
 		out << " pos: " << it->second << endl;
 	}
-	for (size_t i = 0; i < words.size(); ++i)
+	for (size_t i = 0; i < words.size(); ++i)          // Сами слова
 	{
 		out << setw(5) << i << " ";
 		out << words[i]->gets() << endl;
